@@ -1,0 +1,54 @@
+name: Semgrep Security Scan (Manual)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  semgrep:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout code
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Set up Node
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # Set up Python
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      # Install Semgrep CLI
+      - name: Install Semgrep CLI
+        run: pip install semgrep
+
+      # Clone Semgrep rules
+      - name: Clone Semgrep Rules
+        run: |
+          mkdir -p .semgrep_rules
+          git clone --depth 1 https://github.com/semgrep/semgrep-rules.git .semgrep_rules
+
+      # Run Semgrep scan
+      - name: Run Semgrep Scan
+        run: |
+          DATE=$(date +'%d-%m-%Y')
+          REPORT_FILE="semgrep-report-${DATE}.json"
+          semgrep scan \
+            --config .semgrep_rules/javascript \
+            --config .semgrep_rules/typescript \
+            --disable-version-check \
+            --no-rewrite-rule-ids \
+            --json > $REPORT_FILE
+
+      # Upload reports as artifacts
+      - name: Upload Reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: semgrep-reports
+          path: $REPORT_FILE
